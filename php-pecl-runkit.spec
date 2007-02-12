@@ -1,7 +1,7 @@
 %define		_modname	runkit
 %define		_status		beta
 Summary:	%{_modname} - mangle with user defined functions and classes
-Summary(pl):	%{_modname} - obrÛbka zdefiniowanych przez uøytkownika funkcji i klas
+Summary(pl.UTF-8):   %{_modname} - obr√≥bka zdefiniowanych przez u≈ºytkownika funkcji i klas
 Name:		php-pecl-%{_modname}
 Version:	0.9
 Release:	1
@@ -24,10 +24,10 @@ in restricted environment (sandboxing).
 
 In PECL status of this extension is: %{_status}.
 
-%description -l pl
-ZastÍpowanie, zmiana nazwy lub usuwanie zdefiniowanych przez
-uøytkownika funkcji i klas. Definiowanie zmiennych superglobalnych do
-ogÛlnego uøytku. Wykonywanie danego kodu w ograniczonym ∂rodowisku
+%description -l pl.UTF-8
+Zastƒôpowanie, zmiana nazwy lub usuwanie zdefiniowanych przez
+u≈ºytkownika funkcji i klas. Definiowanie zmiennych superglobalnych do
+og√≥lnego u≈ºytku. Wykonywanie danego kodu w ograniczonym ≈õrodowisku
 (sandbox).
 
 To rozszerzenie ma w PECL status: %{_status}.
