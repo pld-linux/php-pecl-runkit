@@ -1,0 +1,11 @@
+--- php-pecl-runkit-0.9/runkit_import.c~	2006-06-07 00:06:08.000000000 +0300
++++ php-pecl-runkit-0.9/runkit_import.c	2008-10-13 01:24:08.073851193 +0300
+@@ -227,7 +227,7 @@
+ 			char *cname = NULL, *pname = key;
+ 
+ #ifdef ZEND_ENGINE_2
+-			zend_unmangle_property_name(key, &cname, &pname);
++			zend_unmangle_property_name(key, key_len - 1, &cname, &pname);
+ #endif
+ 			if (zend_hash_exists(&dce->default_properties, key, key_len)) {
+ 				if (override) {
