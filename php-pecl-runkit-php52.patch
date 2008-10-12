@@ -9,3 +9,15 @@
  #endif
  			if (zend_hash_exists(&dce->default_properties, key, key_len)) {
  				if (override) {
+--- php-pecl-runkit-0.9/runkit_sandbox.c~	2008-10-13 01:36:43.000000000 +0300
++++ php-pecl-runkit-0.9/runkit_sandbox.c	2008-10-13 01:36:51.665946502 +0300
+@@ -1467,8 +1467,7 @@
+ 	zval *retval; \
+ \
+ 	ALLOC_ZVAL(retval); \
+-	Z_TYPE_P(retval) = IS_BOOL; \
+-	Z_BVAL_P(retval) = objval->name; \
++	ZVAL_BOOL(retval, objval->name); \
+ 	retval->refcount = 0; \
+ 	retval->is_ref = 0; \
+ \
