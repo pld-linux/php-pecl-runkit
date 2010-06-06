@@ -71,3 +71,14 @@
  		}
  		zend_hash_next_index_insert(RUNKIT_G(misplaced_internal_functions), (void*)&hash_key, sizeof(zend_hash_key), NULL);
  	}
+--- php-pecl-runkit-0.9/runkit_sandbox.c~	2010-06-06 19:53:07.000000000 +0300
++++ php-pecl-runkit-0.9/runkit_sandbox.c	2010-06-06 19:53:09.195711797 +0300
+@@ -1570,7 +1570,7 @@
+ 	char *name;
+ 	int name_len;
+ 	zval *(*getter)(php_runkit_sandbox_object *objval TSRMLS_DC);
+-	int (*setter)(php_runkit_sandbox_object *objval, zval *value TSRMLS_DC);
++	void (*setter)(php_runkit_sandbox_object *objval, zval *value TSRMLS_DC);
+ };
+ 
+ struct _php_runkit_sandbox_settings php_runkit_sandbox_settings[] = {
