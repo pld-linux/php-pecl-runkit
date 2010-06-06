@@ -82,3 +82,14 @@
  };
  
  struct _php_runkit_sandbox_settings php_runkit_sandbox_settings[] = {
+--- php-pecl-runkit-0.9/runkit_methods.c~	2010-06-06 19:54:11.000000000 +0300
++++ php-pecl-runkit-0.9/runkit_methods.c	2010-06-06 19:55:38.755850653 +0300
+@@ -397,7 +397,7 @@
+ 	dfe.common.scope = dce;
+ #endif
+ 
+-	if (zend_hash_add(&dce->function_table, dfunc, dfunc_len + 1, &dfe, sizeof(zend_function), &dfeInHashTable) == FAILURE) {
++	if (zend_hash_add(&dce->function_table, dfunc, dfunc_len + 1, &dfe, sizeof(zend_function), (void **)(&dfeInHashTable)) == FAILURE) {
+ 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Error adding method to class %s::%s()", dclass, dfunc);
+ 		return FAILURE;
+ 	}
