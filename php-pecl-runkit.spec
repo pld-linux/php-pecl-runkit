@@ -31,6 +31,11 @@ ogólnego użytku. Wykonywanie danego kodu w ograniczonym środowisku
 
 To rozszerzenie ma w PECL status: %{status}.
 
+%description -l ru.UTF-8
+Замещение, переименование и удаление оперделенных пользователем
+функций и классов. Определение собственных суперглобальных переменных.
+Выполнение кода в ограниченной среде (песочнице)
+
 %prep
 %setup -qc
 mv %{modname}-%{version}/* .
