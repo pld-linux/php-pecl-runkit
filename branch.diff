@@ -1,0 +1,915 @@
+Index: package2.xml
+===================================================================
+Cannot display: file marked as a binary type.
+svn:mime-type = application/xml
+Index: runkit_methods.c
+===================================================================
+--- runkit_methods.c	(.../tags/RELEASE_0_9)
++++ runkit_methods.c	(.../trunk)
+@@ -2,6 +2,8 @@
+   +----------------------------------------------------------------------+
+   | PHP Version 5                                                        |
+   +----------------------------------------------------------------------+
++  | Copyright (c) 1997-2006 The PHP Group                                |
++  +----------------------------------------------------------------------+
+   | This source file is subject to version 3.0 of the PHP license,       |
+   | that is bundled with this package in the file LICENSE, and is        |
+   | available through the world-wide-web at the following url:           |
+@@ -373,7 +375,7 @@
+ 								  char *sclass, int sclass_len, char *sfunc, int sfunc_len TSRMLS_DC)
+ {
+ 	zend_class_entry *dce, *sce;
+-	zend_function dfe, *sfe;
++	zend_function dfe, *sfe, *dfeInHashTable;
+ 
+ 	if (php_runkit_fetch_class_method(sclass, sclass_len, sfunc, sfunc_len, &sce, &sfe TSRMLS_CC) == FAILURE) {
+ 		return FAILURE;
+@@ -395,12 +397,12 @@
+ 	dfe.common.scope = dce;
+ #endif
+ 
+-	if (zend_hash_add(&dce->function_table, dfunc, dfunc_len + 1, &dfe, sizeof(zend_function), NULL) == FAILURE) {
++	if (zend_hash_add(&dce->function_table, dfunc, dfunc_len + 1, &dfe, sizeof(zend_function), &dfeInHashTable) == FAILURE) {
+ 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Error adding method to class %s::%s()", dclass, dfunc);
+ 		return FAILURE;
+ 	}
+ 
+-	PHP_RUNKIT_ADD_MAGIC_METHOD(dce, dfunc, &dfe);
++	PHP_RUNKIT_ADD_MAGIC_METHOD(dce, dfunc, dfeInHashTable);
+ 
+ 	zend_hash_apply_with_arguments(EG(class_table), (apply_func_args_t)php_runkit_update_children_methods, 5, dce, dce, &dfe, dfunc, dfunc_len);
+ 
+
+Property changes on: runkit_methods.c
+___________________________________________________________________
+Modified: cvs2svn:cvs-rev
+   - 1.6
+   + 1.8
+
+Index: runkit_props.c
+===================================================================
+--- runkit_props.c	(.../tags/RELEASE_0_9)
++++ runkit_props.c	(.../trunk)
+@@ -2,6 +2,8 @@
+   +----------------------------------------------------------------------+
+   | PHP Version 5                                                        |
+   +----------------------------------------------------------------------+
++  | Copyright (c) 1997-2006 The PHP Group                                |
++  +----------------------------------------------------------------------+
+   | This source file is subject to version 3.0 of the PHP license,       |
+   | that is bundled with this package in the file LICENSE, and is        |
+   | available through the world-wide-web at the following url:           |
+@@ -124,8 +126,14 @@
+ 	ALLOC_ZVAL(copyval);
+ 	*copyval = *value;
+ 	zval_copy_ctor(copyval);
++
++#if (PHP_MAJOR_VERSION == 5 && PHP_MINOR_VERSION >= 3) || (PHP_MAJOR_VERSION >= 6)
++	Z_SET_REFCOUNT_P(copyval, 1);
++	Z_UNSET_ISREF_P(copyval);
++#else
+ 	copyval->refcount = 1;
+ 	copyval->is_ref = 0;
++#endif
+ 
+ 	if (zend_hash_add(&ce->default_properties, key, key_len + 1, &copyval, sizeof(zval *), NULL) == FAILURE) {
+ 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to add default property to class definition");
+
+Property changes on: runkit_props.c
+___________________________________________________________________
+Modified: cvs2svn:cvs-rev
+   - 1.4
+   + 1.6
+
+Index: runkit_sandbox_parent.c
+===================================================================
+--- runkit_sandbox_parent.c	(.../tags/RELEASE_0_9)
++++ runkit_sandbox_parent.c	(.../trunk)
+@@ -2,6 +2,8 @@
+   +----------------------------------------------------------------------+
+   | PHP Version 5                                                        |
+   +----------------------------------------------------------------------+
++  | Copyright (c) 1997-2006 The PHP Group                                |
++  +----------------------------------------------------------------------+
+   | This source file is subject to version 3.0 of the PHP license,       |
+   | that is bundled with this package in the file LICENSE, and is        |
+   | available through the world-wide-web at the following url:           |
+@@ -699,14 +701,13 @@
+    * Class Definition *
+    ******************** */
+ 
+-static
+-	ZEND_BEGIN_ARG_INFO_EX(php_runkit_require_two_args, 0, 0, 2)
+-		ZEND_ARG_PASS_INFO(0)
+-		ZEND_ARG_PASS_INFO(0)
+-	ZEND_END_ARG_INFO()
++ZEND_BEGIN_ARG_INFO_EX(arginfo_runkit_sandbox_parent__call, 0, 0, 2)
++	ZEND_ARG_PASS_INFO(0)
++	ZEND_ARG_PASS_INFO(0)
++ZEND_END_ARG_INFO()
+ 
+-static function_entry php_runkit_sandbox_parent_functions[] = {
+-	PHP_ME(Runkit_Sandbox_Parent,		__call,						php_runkit_require_two_args,		ZEND_ACC_PUBLIC)
++static zend_function_entry php_runkit_sandbox_parent_functions[] = {
++	PHP_ME(Runkit_Sandbox_Parent,		__call,						arginfo_runkit_sandbox_parent__call,ZEND_ACC_PUBLIC)
+ 	/* Language Constructs */
+ 	PHP_ME(Runkit_Sandbox_Parent,		eval,						NULL,								ZEND_ACC_PUBLIC)
+ 	PHP_ME(Runkit_Sandbox_Parent,		include,					NULL,								ZEND_ACC_PUBLIC)
+
+Property changes on: runkit_sandbox_parent.c
+___________________________________________________________________
+Modified: cvs2svn:cvs-rev
+   - 1.6
+   + 1.9
+
+Index: runkit_functions.c
+===================================================================
+--- runkit_functions.c	(.../tags/RELEASE_0_9)
++++ runkit_functions.c	(.../trunk)
+@@ -2,6 +2,8 @@
+   +----------------------------------------------------------------------+
+   | PHP Version 5                                                        |
+   +----------------------------------------------------------------------+
++  | Copyright (c) 1997-2006 The PHP Group                                |
++  +----------------------------------------------------------------------+
+   | This source file is subject to version 3.0 of the PHP license,       |
+   | that is bundled with this package in the file LICENSE, and is        |
+   | available through the world-wide-web at the following url:           |
+@@ -28,7 +30,7 @@
+ 	ptr = EG(current_execute_data);
+ 
+ 	while (ptr) {
+-		if (ptr->op_array->opcodes == op_array->opcodes) {
++		if (ptr->op_array && ptr->op_array->opcodes == op_array->opcodes) {
+ 			return FAILURE;
+ 		}
+ 		ptr = ptr->prev_execute_data;
+@@ -134,6 +136,8 @@
+ 	while (i > 0) {
+ 		i--;
+ 		dupvars[i].name = estrdup(fe->op_array.vars[i].name);
++		dupvars[i].name_len = fe->op_array.vars[i].name_len;
++		dupvars[i].hash_value = fe->op_array.vars[i].hash_value;
+ 	}
+ 	fe->op_array.vars = dupvars;
+ #endif
+@@ -376,7 +380,7 @@
+ 	}
+ 
+ 	if (zend_hash_add(EG(function_table), dfunc, dfunc_len + 1, &func, sizeof(zend_function), NULL) == FAILURE) {
+-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to add refernce to new function name %s()", dfunc);
++		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to add reference to new function name %s()", dfunc);
+ 		zend_function_dtor(fe);
+ 		RETURN_FALSE;
+ 	}
+
+Property changes on: runkit_functions.c
+___________________________________________________________________
+Modified: cvs2svn:cvs-rev
+   - 1.8
+   + 1.11
+
+Index: runkit_import.c
+===================================================================
+--- runkit_import.c	(.../tags/RELEASE_0_9)
++++ runkit_import.c	(.../trunk)
+@@ -2,6 +2,8 @@
+   +----------------------------------------------------------------------+
+   | PHP Version 5                                                        |
+   +----------------------------------------------------------------------+
++  | Copyright (c) 1997-2006 The PHP Group                                |
++  +----------------------------------------------------------------------+
+   | This source file is subject to version 3.0 of the PHP license,       |
+   | that is bundled with this package in the file LICENSE, and is        |
+   | available through the world-wide-web at the following url:           |
+@@ -21,79 +23,65 @@
+ #ifdef PHP_RUNKIT_MANIPULATION
+ /* {{{ php_runkit_import_functions
+  */
+-static int php_runkit_import_functions(int original_num_functions TSRMLS_DC)
++static int php_runkit_import_functions(HashTable *function_table, long flags TSRMLS_DC)
+ {
+ 	HashPosition pos;
+-	zend_function **fe_array;
+-	int i, func = 0, func_count = (zend_hash_num_elements(EG(function_table)) - original_num_functions);
++	int i, func_count = zend_hash_num_elements(function_table);
+ 
+-	fe_array = ecalloc(sizeof(zend_function*) * func_count, 0);
+-
+-	zend_hash_internal_pointer_end_ex(EG(function_table), &pos);
+-	for(i = zend_hash_num_elements(EG(function_table)); i > original_num_functions; i--) {
++	zend_hash_internal_pointer_reset_ex(function_table, &pos);
++	for(i = 0; i < func_count; i++) {
+ 		zend_function *fe = NULL;
+ 		char *key;
+ 		int key_len, type;
+ 		long idx;
++		zend_bool add_function = 1;
+ 
+-		zend_hash_get_current_data_ex(EG(function_table), (void**)&fe, &pos);
+-		PHP_RUNKIT_FUNCTION_ADD_REF(fe);
+-		fe_array[func++] = fe;
++		zend_hash_get_current_data_ex(function_table, (void**)&fe, &pos);
+ 
+ 		if (((type = zend_hash_get_current_key_ex(EG(function_table), &key, &key_len, &idx, 0, &pos)) != HASH_KEY_NON_EXISTANT) && 
+ 			fe && fe->type == ZEND_USER_FUNCTION) {
+-
+-			if (type == HASH_KEY_IS_STRING) {
+-				if (zend_hash_del(EG(function_table), key, key_len) == FAILURE) {
+-					goto err_exit;
++		
++			if (flags & PHP_RUNKIT_IMPORT_OVERRIDE) {
++				if (type == HASH_KEY_IS_STRING) {
++					if (zend_hash_del(EG(function_table), key, key_len) == FAILURE) {
++						php_error_docref(NULL TSRMLS_CC, E_WARNING, "Inconsistency cleaning up import environment");
++						return FAILURE;
++					}
++				} else {
++					if (zend_hash_index_del(EG(function_table), idx) == FAILURE) {
++						php_error_docref(NULL TSRMLS_CC, E_WARNING, "Inconsistency cleaning up import environment");
++						return FAILURE;
++					}
+ 				}
+ 			} else {
+-				if (zend_hash_index_del(EG(function_table), idx) == FAILURE) {
+-					goto err_exit;
+-				}
++				add_function = 0;
+ 			}
+-		} else {
+-			goto err_exit;
+ 		}
+-		zend_hash_move_backwards_ex(EG(function_table), &pos);
+-	}
+ 
+-	while (func >= 0) {
+-		zend_function *fe = fe_array[func];
++		if (add_function) {
++			PHP_RUNKIT_FUNCTION_ADD_REF(fe);
+ 
+-		if (fe) {
++
+ 			char *lcase = estrdup(fe->common.function_name);
+ 			int lcase_len = strlen(lcase);
+ 
+ 			php_strtolower(lcase, lcase_len);
+ 			if (zend_hash_add(EG(function_table), lcase, lcase_len + 1, fe, sizeof(zend_function), NULL) == FAILURE) {
+-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failure importing %s()", fe->common.function_name); 
++				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failure importing %s()", fe->common.function_name);
+ #ifdef ZEND_ENGINE_2
+ 				destroy_zend_function(fe TSRMLS_CC);
+ #else
+-				destroy_zend_function(fe);
++				destroy_end_function(fe);
+ #endif
+ 				efree(lcase);
++				return FAILURE;
+ 			}
++			efree(lcase);
+ 		}
+-		func--;
++		zend_hash_move_forward_ex(function_table, &pos);
+ 	}
+ 
+ 	return SUCCESS;
+-err_exit:
+-	while (func >= 0) {
+-		if (fe_array[func]) {
+-#ifdef ZEND_ENGINE_2
+-			destroy_zend_function(fe_array[func] TSRMLS_CC);
+-#else
+-			destroy_zend_function(fe_array[func]);
+-#endif
+-		}
+-		func--;
+-	}
+-	efree(fe_array);
+-	php_error_docref(NULL TSRMLS_CC, E_WARNING, "Inconsistency cleaning up import environment");
+-	return FAILURE;
+ }
+ /* }}} */
+ 
+@@ -226,7 +214,9 @@
+ 		if (zend_hash_get_current_key_ex(&ce->default_properties, &key, &key_len, &idx, 0, &pos) == HASH_KEY_IS_STRING) {
+ 			char *cname = NULL, *pname = key;
+ 
+-#ifdef ZEND_ENGINE_2
++#ifdef ZEND_ENGINE_2_2
++			zend_unmangle_property_name(key, key_len - 1, &cname, &pname);
++#elif defined(ZEND_ENGINE_2)
+ 			zend_unmangle_property_name(key, &cname, &pname);
+ #endif
+ 			if (zend_hash_exists(&dce->default_properties, key, key_len)) {
+@@ -260,21 +250,20 @@
+ 
+ /* {{{ php_runkit_import_classes
+  */
+-static int php_runkit_import_classes(int original_num_classes, long flags TSRMLS_DC)
++static int php_runkit_import_classes(HashTable *class_table, long flags TSRMLS_DC)
+ {
+ 	HashPosition pos;
+-	int i;
++	int i, class_count;
+ 
+-	/* Pop the "new" classes off the class table */
+-	zend_hash_internal_pointer_end_ex(EG(class_table), &pos);
+-	for(i = zend_hash_num_elements(EG(class_table));
+-		i > original_num_classes; i--) {
++	class_count = zend_hash_num_elements(class_table);
++	zend_hash_internal_pointer_reset_ex(class_table, &pos);
++	for(i = 0; i < class_count; i++) {
+ 		zend_class_entry *ce = NULL;
+ 		char *key;
+ 		int key_len, type;
+ 		long idx;
+ 
+-		zend_hash_get_current_data_ex(EG(class_table), (void**)&ce, &pos);
++		zend_hash_get_current_data_ex(class_table, (void**)&ce, &pos);
+ #ifdef ZEND_ENGINE_2
+ 		if (ce) {
+ 			ce = *((zend_class_entry**)ce);
+@@ -289,13 +278,6 @@
+ 			ce && ce->type == ZEND_USER_CLASS) {
+ 			zend_class_entry *dce;
+ 
+-			if (ce->name_length == key_len - 1) {
+-				/* If their lengths are the same it's all the evidence we need that their names are the same.
+-					If their names are the same its because this class was freshly declared, no need for aggregation. */
+-				continue;
+-			}
+-			/* Otherwise aggregate methods/consts/props from temp class to real one then demolish it */
+-
+ 			/* We can clobber the temp class's name, it'll be freed soon anyway */
+ 			php_strtolower(ce->name, ce->name_length);
+ 
+@@ -319,15 +301,15 @@
+ 				php_runkit_import_class_props(dce, ce, (flags & PHP_RUNKIT_IMPORT_OVERRIDE) TSRMLS_CC);
+ 			}
+ 
+-			zend_hash_move_backwards_ex(EG(class_table), &pos);
++			zend_hash_move_forward_ex(class_table, &pos);
+ 
+ 			if (type == HASH_KEY_IS_STRING) {
+-				if (zend_hash_del(EG(class_table), key, key_len) == FAILURE) {
++				if (zend_hash_del(class_table, key, key_len) == FAILURE) {
+ 					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to remove temporary version of class %s", ce->name);
+ 					continue;
+ 				}
+ 			} else {
+-				if (zend_hash_index_del(EG(class_table), idx) == FAILURE) {
++				if (zend_hash_index_del(class_table, idx) == FAILURE) {
+ 					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to remove temporary version of class %s", ce->name);
+ 					continue;
+ 				}
+@@ -404,11 +386,11 @@
+ 	Similar to include(), but doesn't execute root op_array, and allows pre-existing functions/methods to be overridden */
+ PHP_FUNCTION(runkit_import)
+ {
+-	int original_num_functions = zend_hash_num_elements(EG(function_table));
+-	int original_num_classes = zend_hash_num_elements(EG(class_table));
+ 	zend_op_array *new_op_array;
+ 	zval *filename;
+ 	long flags = PHP_RUNKIT_IMPORT_CLASS_METHODS;
++	HashTable *current_class_table, *class_table, *current_function_table, *function_table;
++
+ 	zend_op_array *(*local_compile_filename)(int type, zval *filename TSRMLS_DC) = compile_filename;
+ 
+ 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z|l", &filename, &flags) == FAILURE) {
+@@ -422,11 +404,27 @@
+ 		 * to be used */
+ 		local_compile_filename = php_runkit_compile_filename;
+ 	}
++
++	class_table = (HashTable *) emalloc(sizeof(HashTable));
++	zend_hash_init_ex(class_table, 10, NULL, ZEND_CLASS_DTOR, 0, 0);
++	function_table = (HashTable *) emalloc(sizeof(HashTable));
++	zend_hash_init_ex(function_table, 100, NULL, ZEND_FUNCTION_DTOR, 0, 0);	
++
++	current_class_table = CG(class_table);
++	CG(class_table) = class_table;
++	current_function_table = CG(function_table);
++	CG(function_table) = function_table;
++
+ 	new_op_array = local_compile_filename(ZEND_INCLUDE, filename TSRMLS_CC);
++	
++	CG(class_table) = current_class_table;
++	CG(function_table) = current_function_table;
++	
+ 	if (!new_op_array) {
+ 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Import Failure");
+ 		RETURN_FALSE;
+ 	}
++
+ 	/* We never really needed the main loop opcodes to begin with */
+ #ifdef ZEND_ENGINE_2
+ 	destroy_op_array(new_op_array TSRMLS_CC);
+@@ -436,13 +434,18 @@
+ 	efree(new_op_array);
+ 
+ 	if (flags & PHP_RUNKIT_IMPORT_FUNCTIONS) {
+-		php_runkit_import_functions(original_num_functions TSRMLS_CC);
++		php_runkit_import_functions(function_table, flags TSRMLS_CC);
+ 	}
+ 
+ 	if (flags & PHP_RUNKIT_IMPORT_CLASSES) {
+-		php_runkit_import_classes(original_num_classes, flags TSRMLS_CC);
++		php_runkit_import_classes(class_table, flags TSRMLS_CC);
+ 	}
+ 
++	zend_hash_destroy(class_table);
++	efree(class_table);
++	zend_hash_destroy(function_table);
++	efree(function_table);
++
+ 	RETURN_TRUE;
+ }
+ /* }}} */
+
+Property changes on: runkit_import.c
+___________________________________________________________________
+Modified: cvs2svn:cvs-rev
+   - 1.8
+   + 1.11
+
+Index: runkit_constants.c
+===================================================================
+--- runkit_constants.c	(.../tags/RELEASE_0_9)
++++ runkit_constants.c	(.../trunk)
+@@ -2,6 +2,8 @@
+   +----------------------------------------------------------------------+
+   | PHP Version 5                                                        |
+   +----------------------------------------------------------------------+
++  | Copyright (c) 1997-2006 The PHP Group                                |
++  +----------------------------------------------------------------------+
+   | This source file is subject to version 3.0 of the PHP license,       |
+   | that is bundled with this package in the file LICENSE, and is        |
+   | available through the world-wide-web at the following url:           |
+@@ -197,8 +199,15 @@
+ 	ALLOC_ZVAL(copyval);
+ 	*copyval = *value;
+ 	zval_copy_ctor(copyval);
++
++#if (PHP_MAJOR_VERSION == 5 && PHP_MINOR_VERSION >= 3) || (PHP_MAJOR_VERSION >= 6)
++	Z_SET_REFCOUNT_P(copyval, 1);
++	Z_UNSET_ISREF_P(copyval);
++#else
+ 	copyval->refcount = 1;
+ 	copyval->is_ref = 0;
++#endif
++
+ 	if (zend_hash_add(&ce->constants_table, constname, constname_len + 1, &copyval, sizeof(zval *), NULL) == FAILURE) {
+ 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to add constant to class definition");
+ 		zval_ptr_dtor(&copyval);
+
+Property changes on: runkit_constants.c
+___________________________________________________________________
+Modified: cvs2svn:cvs-rev
+   - 1.3
+   + 1.5
+
+Index: package.xml
+===================================================================
+Cannot display: file marked as a binary type.
+svn:mime-type = application/xml
+
+Property changes on: package.xml
+___________________________________________________________________
+Deleted: svn:mime-type
+   - application/xml
+
+Index: runkit.c
+===================================================================
+--- runkit.c	(.../tags/RELEASE_0_9)
++++ runkit.c	(.../trunk)
+@@ -2,6 +2,8 @@
+   +----------------------------------------------------------------------+
+   | PHP Version 5                                                        |
+   +----------------------------------------------------------------------+
++  | Copyright (c) 1997-2006 The PHP Group                                |
++  +----------------------------------------------------------------------+
+   | This source file is subject to version 3.0 of the PHP license,       |
+   | that is bundled with this package in the file LICENSE, and is        |
+   | available through the world-wide-web at the following url:           |
+@@ -58,15 +60,20 @@
+ 	addr_len = spprintf(&addr, 0, "0x%0lx", (long)value);
+ 	add_assoc_stringl(return_value, "address", addr, addr_len, 0);
+ 
++#if (PHP_MAJOR_VERSION == 5 && PHP_MINOR_VERSION >= 3) || (PHP_MAJOR_VERSION >= 6)
++	add_assoc_long(return_value, "refcount", ZVAL_REFCOUNT(value));
++	add_assoc_bool(return_value, "is_ref", Z_ISREF_P(value));
++#else
+ 	add_assoc_long(return_value, "refcount", value->refcount);
+ 	add_assoc_bool(return_value, "is_ref", value->is_ref);
++#endif
+ 	add_assoc_long(return_value, "type", value->type);
+ }
+ /* }}} */
+ 
+ /* {{{ runkit_functions[]
+  */
+-function_entry runkit_functions[] = {
++zend_function_entry runkit_functions[] = {
+ 
+ 	PHP_FE(runkit_zval_inspect,										NULL)
+ #ifdef ZEND_ENGINE_2
+@@ -418,6 +425,10 @@
+ 
+ 	php_info_print_table_end();
+ 
++#if defined(PHP_RUNKIT_SUPERGLOBALS) || defined(PHP_RUNKIT_MANIPULATION)
++	DISPLAY_INI_ENTRIES();
++#endif
++
+ }
+ /* }}} */
+ 
+
+Property changes on: runkit.c
+___________________________________________________________________
+Modified: cvs2svn:cvs-rev
+   - 1.20
+   + 1.23
+
+Index: tests/bug4519_inc.php
+===================================================================
+--- tests/bug4519_inc.php	(.../tags/RELEASE_0_9)
++++ tests/bug4519_inc.php	(.../trunk)
+@@ -0,0 +1,9 @@
++<?php
++class Foo extends Bar {
++	public function a() { print "IMPORTED: Hello World!\n"; }
++}
++
++class Bar {
++	public function b() { print "IMPORTED: Hello World from Bar!\n"; }
++}
++?>
+
+Property changes on: tests/bug4519_inc.php
+___________________________________________________________________
+Added: svn:eol-style
+   + native
+Added: svn:keywords
+   + Id Rev Revision Date LastChangedDate LastChangedRevision Author LastChangedBy HeadURL URL
+Added: cvs2svn:cvs-rev
+   + 1.1
+
+Index: tests/bug10053.phpt
+===================================================================
+--- tests/bug10053.phpt	(.../tags/RELEASE_0_9)
++++ tests/bug10053.phpt	(.../trunk)
+@@ -0,0 +1,65 @@
++--TEST--
++runkit_method_copy() function
++--SKIPIF--
++<?php if(!extension_loaded("runkit") || !RUNKIT_FEATURE_MANIPULATION) print "skip"; ?>
++--INI--
++error_reporting=E_ALL
++display_errors=on
++--FILE--
++<?php
++class runkit_one {
++	private $b = 0;
++	private $c = 1;
++	
++	function runkit_method($naturalNumber) {
++		$delta = $this->c + $naturalNumber;
++		$thisIsAStrangeVariableWithAVeryLongNameHopeThisWillShowTheError = $delta * $delta;
++		$objectVarWithLongName = new stdclass;
++		$objectVarWithLongName->e = $thisIsAStrangeVariableWithAVeryLongNameHopeThisWillShowTheError;
++		echo "Runkit Method: $naturalNumber\n";
++		var_dump($objectVarWithLongName);
++	}
++}
++
++class runkit_two {
++	private $b = 27;
++	private $c = 99;
++
++}
++
++$o = new runkit_one();
++$o->runkit_method(1);
++
++runkit_method_copy('runkit_two','runkit_method','runkit_one');
++
++$o->runkit_method(2);
++
++$o2 = new runkit_two();
++$o2->runkit_method(3);
++runkit_method_remove('runkit_one','runkit_method');
++if (method_exists('runkit_one','runkit_method')) {
++	echo "Runkit Method still exists in Runkit One!\n";
++}
++$o2->runkit_method(4);
++?>
++--EXPECT--
++Runkit Method: 1
++object(stdClass)#2 (1) {
++  ["e"]=>
++  int(4)
++}
++Runkit Method: 2
++object(stdClass)#2 (1) {
++  ["e"]=>
++  int(9)
++}
++Runkit Method: 3
++object(stdClass)#3 (1) {
++  ["e"]=>
++  int(10404)
++}
++Runkit Method: 4
++object(stdClass)#3 (1) {
++  ["e"]=>
++  int(10609)
++}
+
+Property changes on: tests/bug10053.phpt
+___________________________________________________________________
+Added: svn:eol-style
+   + native
+Added: svn:keywords
+   + Id Rev Revision Date LastChangedDate LastChangedRevision Author LastChangedBy HeadURL URL
+Added: cvs2svn:cvs-rev
+   + 1.1
+
+Index: tests/bug4519.phpt
+===================================================================
+--- tests/bug4519.phpt	(.../tags/RELEASE_0_9)
++++ tests/bug4519.phpt	(.../trunk)
+@@ -0,0 +1,24 @@
++--TEST--
++Bug #4519 Unable to override class definitions of a derived class
++--SKIPIF--
++<?php if(!extension_loaded("runkit")) print "skip"; ?>
++--FILE--
++<?php
++class Foo extends Bar {
++        public function a() { print "Hello World!\n"; }
++}
++
++class Bar {
++        public function b() { print "Hello World from Bar!\n"; }
++}
++
++
++$test = new Foo();
++print($test->b());
++runkit_import(dirname(__FILE__) . '/bug4519_inc.php', RUNKIT_IMPORT_OVERRIDE | RUNKIT_IMPORT_CLASSES);
++$test2 = new Foo();
++print($test2->b());
++?>
++--EXPECT--
++Hello World from Bar!
++IMPORTED: Hello World from Bar!
+
+Property changes on: tests/bug4519.phpt
+___________________________________________________________________
+Added: svn:eol-style
+   + native
+Added: svn:keywords
+   + Id Rev Revision Date LastChangedDate LastChangedRevision Author LastChangedBy HeadURL URL
+Added: cvs2svn:cvs-rev
+   + 1.2
+
+Index: tests/runkit_import_functions_inc.php
+===================================================================
+--- tests/runkit_import_functions_inc.php	(.../tags/RELEASE_0_9)
++++ tests/runkit_import_functions_inc.php	(.../trunk)
+@@ -0,0 +1,8 @@
++<?php
++
++function foo()
++{
++	return "IMPORTED: foo()\n";
++}
++
++?>
+
+Property changes on: tests/runkit_import_functions_inc.php
+___________________________________________________________________
+Added: svn:eol-style
+   + native
+Added: svn:keywords
+   + Id Rev Revision Date LastChangedDate LastChangedRevision Author LastChangedBy HeadURL URL
+Added: cvs2svn:cvs-rev
+   + 1.1
+
+Index: tests/runkit_import_functions.phpt
+===================================================================
+--- tests/runkit_import_functions.phpt	(.../tags/RELEASE_0_9)
++++ tests/runkit_import_functions.phpt	(.../trunk)
+@@ -0,0 +1,22 @@
++--TEST--
++runkit_import() Importing and overriding functions
++--SKIPIF--
++<?php if(!extension_loaded("runkit")) print "skip"; ?>
++--FILE--
++<?php
++
++function foo()
++{
++	return "foo()\n";
++}
++
++print(foo());
++runkit_import(dirname(__FILE__) . '/runkit_import_functions_inc.php', RUNKIT_IMPORT_FUNCTIONS);
++print(foo());
++runkit_import(dirname(__FILE__) . '/runkit_import_functions_inc.php', RUNKIT_IMPORT_OVERRIDE | RUNKIT_IMPORT_FUNCTIONS);
++print(foo());
++?>
++--EXPECT--
++foo()
++foo()
++IMPORTED: foo()
+
+Property changes on: tests/runkit_import_functions.phpt
+___________________________________________________________________
+Added: svn:eol-style
+   + native
+Added: svn:keywords
+   + Id Rev Revision Date LastChangedDate LastChangedRevision Author LastChangedBy HeadURL URL
+Added: cvs2svn:cvs-rev
+   + 1.1
+
+Index: tests/bug10300.phpt
+===================================================================
+--- tests/bug10300.phpt	(.../tags/RELEASE_0_9)
++++ tests/bug10300.phpt	(.../trunk)
+@@ -0,0 +1,27 @@
++--TEST--
++Bug #10300 Segfault when copying __call()
++--SKIPIF--
++<?php if(!extension_loaded("runkit") || !RUNKIT_FEATURE_MANIPULATION) print "skip"; ?>
++--INI--
++error_reporting=E_ALL
++display_errors=on
++--FILE--
++<?php
++class Mixin
++{
++    public function __call($message, $arguments)
++    {
++    }
++}
++
++class Test
++{
++}
++
++runkit_method_copy('Test', '__call', 'Mixin');
++
++$t = new Test;
++$t->test();
++?>
++--EXPECT--
++
+
+Property changes on: tests/bug10300.phpt
+___________________________________________________________________
+Added: svn:eol-style
+   + native
+Added: svn:keywords
+   + Id Rev Revision Date LastChangedDate LastChangedRevision Author LastChangedBy HeadURL URL
+Added: cvs2svn:cvs-rev
+   + 1.1
+
+
+Property changes on: tests
+___________________________________________________________________
+Modified: svn:ignore
+   - phpt.*
+*.diff
+*.log
+*.exp
+*.out
+*.php
+*.gcda
+*.gcno
+
+   + phpt.*
+*.mem
+*.diff
+*.log
+*.exp
+*.out
+*.php
+*.gcda
+*.gcno
+
+
+Index: php_runkit.h
+===================================================================
+--- php_runkit.h	(.../tags/RELEASE_0_9)
++++ php_runkit.h	(.../trunk)
+@@ -2,7 +2,7 @@
+   +----------------------------------------------------------------------+
+   | PHP Version 5                                                        |
+   +----------------------------------------------------------------------+
+-  | Copyright (c) 1997-2004 The PHP Group                                |
++  | Copyright (c) 1997-2006 The PHP Group                                |
+   +----------------------------------------------------------------------+
+   | This source file is subject to version 3.0 of the PHP license,       |
+   | that is bundled with this package in the file LICENSE, and is        |
+@@ -30,7 +30,7 @@
+ #include "ext/standard/info.h"
+ #include "ext/standard/php_string.h"
+ 
+-#define PHP_RUNKIT_VERSION					"0.9"
++#define PHP_RUNKIT_VERSION					"1.0.0-dev"
+ #define PHP_RUNKIT_SANDBOX_CLASSNAME		"Runkit_Sandbox"
+ #define PHP_RUNKIT_SANDBOX_PARENT_CLASSNAME	"Runkit_Sandbox_Parent"
+ 
+@@ -41,6 +41,13 @@
+ #define PHP_RUNKIT_IMPORT_CLASSES			(PHP_RUNKIT_IMPORT_CLASS_METHODS|PHP_RUNKIT_IMPORT_CLASS_CONSTS|PHP_RUNKIT_IMPORT_CLASS_PROPS)
+ #define PHP_RUNKIT_IMPORT_OVERRIDE			0x0010
+ 
++#if ZEND_MODULE_API_NO > 20050922
++#define ZEND_ENGINE_2_2
++#endif
++#if ZEND_MODULE_API_NO > 20050921
++#define ZEND_ENGINE_2_1
++#endif
++
+ /* The TSRM interpreter patch required by runkit_sandbox was added in 5.1, but this package includes diffs for older versions
+  * Those diffs include an additional #define to indicate that they've been applied
+  */
+
+Property changes on: php_runkit.h
+___________________________________________________________________
+Modified: cvs2svn:cvs-rev
+   - 1.28
+   + 1.31
+
+Index: runkit_classes.c
+===================================================================
+--- runkit_classes.c	(.../tags/RELEASE_0_9)
++++ runkit_classes.c	(.../trunk)
+@@ -2,6 +2,8 @@
+   +----------------------------------------------------------------------+
+   | PHP Version 5                                                        |
+   +----------------------------------------------------------------------+
++  | Copyright (c) 1997-2006 The PHP Group                                |
++  +----------------------------------------------------------------------+
+   | This source file is subject to version 3.0 of the PHP license,       |
+   | that is bundled with this package in the file LICENSE, and is        |
+   | available through the world-wide-web at the following url:           |
+
+Property changes on: runkit_classes.c
+___________________________________________________________________
+Modified: cvs2svn:cvs-rev
+   - 1.6
+   + 1.7
+
+Index: runkit_sandbox.c
+===================================================================
+--- runkit_sandbox.c	(.../tags/RELEASE_0_9)
++++ runkit_sandbox.c	(.../trunk)
+@@ -2,6 +2,8 @@
+   +----------------------------------------------------------------------+
+   | PHP Version 5                                                        |
+   +----------------------------------------------------------------------+
++  | Copyright (c) 1997-2006 The PHP Group                                |
++  +----------------------------------------------------------------------+
+   | This source file is subject to version 3.0 of the PHP license,       |
+   | that is bundled with this package in the file LICENSE, and is        |
+   | available through the world-wide-web at the following url:           |
+@@ -1468,7 +1470,7 @@
+ \
+ 	ALLOC_ZVAL(retval); \
+ 	Z_TYPE_P(retval) = IS_BOOL; \
+-	Z_BVAL_P(retval) = objval->name; \
++	Z_LVAL_P(retval) = objval->name; \
+ 	retval->refcount = 0; \
+ 	retval->is_ref = 0; \
+ \
+@@ -1714,15 +1716,14 @@
+    * Class Definition *
+    ******************** */
+ 
+-static
+-	ZEND_BEGIN_ARG_INFO_EX(php_runkit_require_two_args, 0, 0, 2)
+-		ZEND_ARG_PASS_INFO(0)
+-		ZEND_ARG_PASS_INFO(0)
+-	ZEND_END_ARG_INFO()
++ZEND_BEGIN_ARG_INFO_EX(arginfo_runkit_sandbox__call, 0, 0, 2)
++	ZEND_ARG_PASS_INFO(0)
++	ZEND_ARG_PASS_INFO(0)
++ZEND_END_ARG_INFO()
+ 
+-static function_entry php_runkit_sandbox_functions[] = {
++static zend_function_entry php_runkit_sandbox_functions[] = {
+ 	PHP_ME(Runkit_Sandbox,		__construct,				NULL,								ZEND_ACC_PUBLIC		| ZEND_ACC_CTOR)
+-	PHP_ME(Runkit_Sandbox,		__call,						php_runkit_require_two_args,		ZEND_ACC_PUBLIC)
++	PHP_ME(Runkit_Sandbox,		__call,						arginfo_runkit_sandbox__call,		ZEND_ACC_PUBLIC)
+ 	/* Language Constructs */
+ 	PHP_ME(Runkit_Sandbox,		eval,						NULL,								ZEND_ACC_PUBLIC)
+ 	PHP_ME(Runkit_Sandbox,		include,					NULL,								ZEND_ACC_PUBLIC)
+
+Property changes on: runkit_sandbox.c
+___________________________________________________________________
+Modified: cvs2svn:cvs-rev
+   - 1.30
+   + 1.34
+
