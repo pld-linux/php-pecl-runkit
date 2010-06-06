@@ -1,0 +1,42 @@
+--- php-pecl-runkit-0.9/runkit.c~	2010-06-06 18:30:08.000000000 +0300
++++ php-pecl-runkit-0.9/runkit.c	2010-06-06 18:30:11.272865268 +0300
+@@ -195,11 +195,7 @@
+  */
+ PHP_MINIT_FUNCTION(runkit)
+ {
+-#ifdef ZTS
+-	ts_allocate_id(&runkit_globals_id, sizeof(zend_runkit_globals), php_runkit_globals_ctor, NULL);
+-#else
+-	php_runkit_globals_ctor(&runkit_globals);
+-#endif
++	ZEND_INIT_MODULE_GLOBALS(runkit, php_runkit_globals_ctor, php_runkit_globals_ctor);
+ 
+ #if defined(PHP_RUNKIT_SUPERGLOBALS) || defined(PHP_RUNKIT_MANIPULATION)
+ 	REGISTER_INI_ENTRIES();
+@@ -364,7 +360,7 @@
+ {
+ #ifdef PHP_RUNKIT_SUPERGLOBALS
+ 	if (RUNKIT_G(superglobals)) {
+-		zend_hash_apply(RUNKIT_G(superglobals), php_runkit_superglobal_dtor TSRMLS_CC);
++		zend_hash_apply(RUNKIT_G(superglobals), (apply_func_t) php_runkit_superglobal_dtor TSRMLS_CC);
+ 
+ 		zend_hash_destroy(RUNKIT_G(superglobals));
+ 		FREE_HASHTABLE(RUNKIT_G(superglobals));
+@@ -374,7 +370,7 @@
+ #ifdef PHP_RUNKIT_MANIPULATION
+ 	if (RUNKIT_G(misplaced_internal_functions)) {
+ 		/* Just wipe out rename-to targets before restoring originals */
+-		zend_hash_apply(RUNKIT_G(misplaced_internal_functions), php_runkit_destroy_misplaced_functions TSRMLS_CC);
++		zend_hash_apply(RUNKIT_G(misplaced_internal_functions), (apply_func_t) php_runkit_destroy_misplaced_functions TSRMLS_CC);
+ 		zend_hash_destroy(RUNKIT_G(misplaced_internal_functions));
+ 		FREE_HASHTABLE(RUNKIT_G(misplaced_internal_functions));
+ 		RUNKIT_G(misplaced_internal_functions) = NULL;
+@@ -382,7 +378,7 @@
+ 
+ 	if (RUNKIT_G(replaced_internal_functions)) {
+ 		/* Restore internal functions */
+-		zend_hash_apply_with_arguments(RUNKIT_G(replaced_internal_functions), php_runkit_restore_internal_functions, 1, RUNKIT_TSRMLS_C);
++		zend_hash_apply_with_arguments(RUNKIT_G(replaced_internal_functions), (apply_func_args_t) php_runkit_restore_internal_functions, 1, RUNKIT_TSRMLS_C);
+ 		zend_hash_destroy(RUNKIT_G(replaced_internal_functions));
+ 		FREE_HASHTABLE(RUNKIT_G(replaced_internal_functions));
+ 		RUNKIT_G(replaced_internal_functions) = NULL;
