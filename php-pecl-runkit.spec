@@ -11,6 +11,7 @@ Source0:	http://pecl.php.net/get/%{modname}-%{version}.tgz
 # Source0-md5:	855786f79a3803972b04e44c32cece8d
 Patch0:		branch.diff
 Patch1:		php52-api-warnings.patch
+Patch2:		php53.patch
 URL:		http://pecl.php.net/package/runkit/
 BuildRequires:	php-devel >= 4:5.2
 BuildRequires:	rpmbuild(macros) >= 1.344
@@ -42,6 +43,7 @@ To rozszerzenie ma w PECL status: %{status}.
 mv %{modname}-%{version}/* .
 %patch0 -p0
 %patch1 -p1
+%patch2 -p2
 
 %build
 phpize

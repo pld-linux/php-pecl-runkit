@@ -1,0 +1,281 @@
+http://pecl.php.net/bugs/bug.php?id=15969
+- php-pecl-runkit-0.9.Z_NEW_REFCOUNT.patch
+- php-pecl-runkit-0.9-ZVAL_ADDREF.patch
+- php-pecl-runkit-0.9-ZVAL_REFCOUNT.patch
+
+diff -NaurEbBH php-pecl-runkit-0.9.ORIG/runkit/runkit_sandbox.c php-pecl-runkit-0.9.WORK/runkit/runkit_sandbox.c
+--- php-pecl-runkit-0.9.ORIG/runkit/runkit_sandbox.c	2006-11-28 15:31:26.000000000 +0300
++++ php-pecl-runkit-0.9.WORK/runkit/runkit_sandbox.c	2008-05-12 19:15:56.000000000 +0400
+@@ -471,7 +471,7 @@
+ 						op_array = zend_compile_file(&file_handle, type TSRMLS_CC);
+ 						zend_destroy_file_handle(&file_handle TSRMLS_CC);
+ 					} else {
+-						zend_file_handle_dtor(&file_handle);
++						zend_file_handle_dtor(&file_handle TSRMLS_CC);
+ 						RETVAL_TRUE;
+ 						already_included = 1;
+ 					}
+@@ -730,7 +730,7 @@
+ 		/* ZE expects refcount == 0 for unowned values */
+ 		INIT_PZVAL(return_value);
+ 		PHP_SANDBOX_CROSS_SCOPE_ZVAL_COPY_CTOR(return_value);
+-		return_value->refcount--;
++		Z_DELREF_P(return_value);
+ 
+ 		return return_value;
+ 	} else {
+@@ -803,7 +803,7 @@
+ 		member_copy = *member;
+ 		member = &member_copy;
+ 		zval_copy_ctor(member);
+-		member->refcount = 1;
++		Z_SET_REFCOUNT(member, 1);
+ 		convert_to_string(member);
+ 	}
+ 
+@@ -877,7 +877,7 @@
+ 		member_copy = *member;
+ 		member = &member_copy;
+ 		zval_copy_ctor(member);
+-		member->refcount = 1;
++		Z_SET_REFCOUNT(member, 1);
+ 		convert_to_string(member);
+ 	}
+ 
+@@ -1392,8 +1392,8 @@
+ 		zval callback_copy = *callback;
+ 
+ 		zval_copy_ctor(&callback_copy);
+-		callback_copy.is_ref = 0;
+-		callback_copy.refcount = 1;
++		Z_UNSET_ISREF(callback_copy);
++		Z_SET_REFCOUNT(callback_copy, 1);
+ 		callback_is_true = zval_is_true(&callback_copy);
+ 		zval_dtor(&callback_copy);
+ 	}
+@@ -1413,8 +1413,8 @@
+ 	if (objval->output_handler && return_value_used) {
+ 		*return_value = *objval->output_handler;
+ 		zval_copy_ctor(return_value);
+-		return_value->refcount = 1;
+-		return_value->is_ref = 0;
++		Z_SET_REFCOUNT(return_value, 1);
++		Z_UNSET_ISREF(return_value);
+ 	} else {
+ 		RETVAL_FALSE;
+ 	}
+@@ -1430,14 +1430,14 @@
+ 
+ 	if (callback && callback_is_true) {
+ 		zval *cb = callback;
+-		if (callback->is_ref) {
++		if (Z_ISREF_P(callback)) {
+ 			MAKE_STD_ZVAL(cb);
+ 			*cb = *callback;
+ 			zval_copy_ctor(cb);
+-			cb->refcount = 0;
+-			cb->is_ref = 0;
++			Z_SET_REFCOUNT(cb, 0);
++			Z_UNSET_ISREF_P(cb);
+ 		}
+-		cb->refcount++;
++		Z_ADDREF_P(cb);
+ 		objval->output_handler = cb;
+ 	}
+ }
+@@ -1469,10 +1469,9 @@
+ 	zval *retval; \
+ \
+ 	ALLOC_ZVAL(retval); \
+-	Z_TYPE_P(retval) = IS_BOOL; \
+-	Z_LVAL_P(retval) = objval->name; \
+-	retval->refcount = 0; \
+-	retval->is_ref = 0; \
++	ZVAL_BOOL(retval, objval->name); \
++	Z_SET_REFCOUNT(retval, 0); \
++	Z_UNSET_ISREF(retval); \
+ \
+ 	return retval; \
+ }
+@@ -1499,7 +1498,7 @@
+ 		zval_ptr_dtor(&objval->output_handler);
+ 	}
+ 
+-	value->refcount++;
++	Z_ADDREF_P(value);
+ 	objval->output_handler = value;
+ }
+ 
+@@ -1514,7 +1513,7 @@
+ 	} else {
+ 		ZVAL_LONG(retval, objval->parent_scope);
+ 	}
+-	retval->refcount = 0;
++	Z_SET_REFCOUNT(retval, 0);
+ 
+ 	return retval;
+ }
+@@ -1620,7 +1619,7 @@
+ 		member_copy = *member;
+ 		member = &member_copy;
+ 		zval_copy_ctor(member);
+-		member->refcount = 1;
++		Z_SET_REFCOUNT(member, 1);
+ 		convert_to_string(member);
+ 	}
+ 
+@@ -1656,7 +1655,7 @@
+ 		member_copy = *member;
+ 		member = &member_copy;
+ 		zval_copy_ctor(member);
+-		member->refcount = 1;
++		Z_SET_REFCOUNT(member, 1);
+ 		convert_to_string(member);
+ 	}
+ 
+@@ -1692,7 +1691,7 @@
+ 		member_copy = *member;
+ 		member = &member_copy;
+ 		zval_copy_ctor(member);
+-		member->refcount = 1;
++		Z_SET_REFCOUNT(member, 1);
+ 		convert_to_string(member);
+ 	}
+ 
+diff -NaurEbBH php-pecl-runkit-0.9.ORIG/runkit/runkit_sandbox_parent.c php-pecl-runkit-0.9.WORK/runkit/runkit_sandbox_parent.c
+--- php-pecl-runkit-0.9.ORIG/runkit/runkit_sandbox_parent.c	2006-06-07 21:35:33.000000000 +0400
++++ php-pecl-runkit-0.9.WORK/runkit/runkit_sandbox_parent.c	2008-05-12 19:22:39.000000000 +0400
+@@ -94,8 +94,8 @@
+ 					ALLOC_INIT_ZVAL(hidden);
+ 					array_init(hidden);
+ 					ht = Z_ARRVAL_P(hidden);
+-					if ((*symtable)->refcount > 1 &&
+-						!(*symtable)->is_ref) {
++					if (Z_REFCOUNT_PP(symtable) > 1 &&
++						!Z_ISREF_PP(symtable)) {
+ 						zval *cv;
+ 
+ 						MAKE_STD_ZVAL(cv);
+@@ -105,8 +105,8 @@
+ 						INIT_PZVAL(cv);
+ 						*symtable = cv;
+ 					}
+-					(*symtable)->is_ref = 1;
+-					(*symtable)->refcount++;
++					Z_SET_ISREF_PP(symtable);
++					Z_ADDREF_PP(symtable);
+ 					zend_hash_update(ht, objval->self->parent_scope_name, objval->self->parent_scope_namelen + 1, (void*)symtable, sizeof(zval*), NULL);
+ 
+ 					/* Store that dummy array in the sandbox's hidden properties table so that it gets cleaned up on dtor */
+@@ -278,7 +278,7 @@
+ 					op_array = zend_compile_file(&file_handle, type TSRMLS_CC);
+ 					zend_destroy_file_handle(&file_handle TSRMLS_CC);
+ 				} else {
+-					zend_file_handle_dtor(&file_handle);
++					zend_file_handle_dtor(&file_handle TSRMLS_CC);
+ 					RETVAL_TRUE;
+ 					already_included = 1;
+ 				}
+@@ -534,7 +534,7 @@
+ 		/* ZE expects refcount == 0 for unowned values */
+ 		INIT_PZVAL(return_value);
+ 		PHP_SANDBOX_CROSS_SCOPE_ZVAL_COPY_CTOR(return_value);
+-		return_value->refcount--;
++		Z_DELREF_P(return_value);
+ 
+ 		return return_value;
+ 	} else {
+@@ -607,7 +607,7 @@
+ 		member_copy = *member;
+ 		member = &member_copy;
+ 		zval_copy_ctor(member);
+-		member->refcount = 1;
++		Z_SET_REFCOUNT_P(member, 1);
+ 		convert_to_string(member);
+ 	}
+ 
+@@ -680,7 +680,7 @@
+ 		member_copy = *member;
+ 		member = &member_copy;
+ 		zval_copy_ctor(member);
+-		member->refcount = 1;
++		Z_SET_REFCOUNT_P(member, 1);
+ 		convert_to_string(member);
+ 	}
+ 
+diff -NaurEbBH php-pecl-runkit-0.9.ORIG/runkit/php_runkit.h php-pecl-runkit-0.9.WORK/runkit/php_runkit.h
+--- php-pecl-runkit-0.9.ORIG/runkit/php_runkit.h	2008-03-31 14:11:36.000000000 +0400
++++ php-pecl-runkit-0.9.WORK/runkit/php_runkit.h	2008-05-12 20:05:14.000000000 +0400
+@@ -261,8 +261,8 @@
+ 		default: \
+ 			zval_copy_ctor(pzv); \
+ 	} \
+-	(pzv)->refcount = 1; \
+-	(pzv)->is_ref = 0; \
++	Z_SET_REFCOUNT_P(pzv, 1); \
++	Z_UNSET_ISREF(pzv); \
+ }
+ #endif /* PHP_RUNKIT_SANDBOX */
+ 
+diff -NaurEbBH php-pecl-runkit-0.9.orig/runkit-0.9/runkit_constants.c php-pecl-runkit-0.9/runkit-0.9/runkit_constants.c
+--- php-pecl-runkit-0.9.orig/runkit-0.9/runkit_constants.c	2007-10-24 06:43:27.000000000 +0400
++++ php-pecl-runkit-0.9/runkit-0.9/runkit_constants.c	2008-03-10 15:30:44.000000000 +0300
+@@ -71,7 +71,8 @@
+ 	zend_hash_apply_with_arguments(EG(class_table), (apply_func_args_t)php_runkit_update_children_consts, 4, ce, c, cname, cname_len);
+ 
+ 	zend_hash_del(&ce->constants_table, cname, cname_len + 1);
+-	ZVAL_ADDREF(c);
++//*Hu	ZVAL_ADDREF(c);
++	Z_ADDREF_P(c);
+ 	if (zend_hash_add(&ce->constants_table, cname, cname_len + 1, c, sizeof(zval*), NULL) ==  FAILURE) {
+ 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Error updating child class");
+ 		return ZEND_HASH_APPLY_KEEP;
+diff -NaurEbBH php-pecl-runkit-0.9.orig/runkit-0.9/runkit_import.c php-pecl-runkit-0.9/runkit-0.9/runkit_import.c
+--- php-pecl-runkit-0.9.orig/runkit-0.9/runkit_import.c	2006-10-26 20:18:52.000000000 +0400
++++ php-pecl-runkit-0.9/runkit-0.9/runkit_import.c	2008-03-10 15:32:00.000000000 +0300
+@@ -193,7 +193,8 @@
+ 					goto import_const_skip;
+ 				}
+ 			}
+-			ZVAL_ADDREF(*c);
++//*Hu			ZVAL_ADDREF(*c);
++			Z_ADDREF_P(*c);
+ 			if (zend_hash_add_or_update(&dce->constants_table, key, key_len, (void*)c, sizeof(zval*), NULL, action) == FAILURE) {
+ 				zval_ptr_dtor(c);
+ 				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to import %s::%s", dce->name, key);
+@@ -241,7 +242,8 @@
+ 					goto import_prop_skip;
+ 				}
+ 			}
+-			ZVAL_ADDREF(*p);
++//*Hu			ZVAL_ADDREF(*p);
++			Z_ADDREF_P(*p);
+ 			if (zend_hash_add_or_update(&dce->default_properties, key, key_len, (void*)p, sizeof(zval*), NULL, action) == FAILURE) {
+ 				zval_ptr_dtor(p);
+ 				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to import %s->%s", dce->name, pname);
+diff -NaurEbBH php-pecl-runkit-0.9.orig/runkit-0.9/runkit_props.c php-pecl-runkit-0.9/runkit-0.9/runkit_props.c
+--- php-pecl-runkit-0.9.orig/runkit-0.9/runkit_props.c	2007-10-24 06:43:27.000000000 +0400
++++ php-pecl-runkit-0.9/runkit-0.9/runkit_props.c	2008-03-10 15:32:16.000000000 +0300
+@@ -45,7 +45,8 @@
+ 	zend_hash_apply_with_arguments(EG(class_table), (apply_func_args_t)php_runkit_update_children_def_props, 4, ce, p, pname, pname_len);
+ 
+ 	zend_hash_del(&ce->default_properties, pname, pname_len + 1);
+-	ZVAL_ADDREF(p);
++//*Hu	ZVAL_ADDREF(p);
++	Z_ADDREF_P(p);
+ 	if (zend_hash_add(&ce->default_properties, pname, pname_len + 1, p, sizeof(zval*), NULL) ==  FAILURE) {
+ 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Error updating child class");
+ 		return ZEND_HASH_APPLY_KEEP;
+diff -NaurEbBH php-pecl-runkit-0.9.orig/runkit-0.9/runkit.c php-pecl-runkit-0.9/runkit-0.9/runkit.c
+--- php-pecl-runkit-0.9.orig/runkit-0.9/runkit.c	2007-10-24 06:43:27.000000000 +0400
++++ php-pecl-runkit-0.9/runkit-0.9/runkit.c	2008-03-10 15:20:40.000000000 +0300
+@@ -61,7 +61,8 @@
+ 	add_assoc_stringl(return_value, "address", addr, addr_len, 0);
+ 
+ #if (PHP_MAJOR_VERSION == 5 && PHP_MINOR_VERSION >= 3) || (PHP_MAJOR_VERSION >= 6)
+-	add_assoc_long(return_value, "refcount", ZVAL_REFCOUNT(value));
++//*Hu	add_assoc_long(return_value, "refcount", ZVAL_REFCOUNT(value));
++	add_assoc_long(return_value, "refcount", Z_REFCOUNT_P(value));
+ 	add_assoc_bool(return_value, "is_ref", Z_ISREF_P(value));
+ #else
+ 	add_assoc_long(return_value, "refcount", value->refcount);
