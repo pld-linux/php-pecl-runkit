@@ -1,3 +1,7 @@
+#
+# Conditional build:
+%bcond_without	tests		# build without tests
+
 %define		modname	runkit
 %define		status	beta
 Summary:	%{modname} - mangle with user defined functions and classes
@@ -16,7 +20,7 @@ Patch3:		php53-zts.patch
 Patch4:		php53-refcount.patch
 Patch5:		php53-sapi_headers.patch
 URL:		http://pecl.php.net/package/runkit/
-BuildRequires:	php-devel >= 4:5.2
+BuildRequires:	php-devel >= 4:5.3.2-5
 BuildRequires:	rpmbuild(macros) >= 1.344
 %{?requires_php_extension}
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
@@ -55,6 +59,17 @@ mv %{modname}-%{version}/* .
 phpize
 %configure
 %{__make}
+
+%if %{with tests}
+cat <<'EOF' > run-tests.sh
+#!/bin/sh
+%{__make} test \
+	RUN_TESTS_SETTINGS="-q $*"
+EOF
+chmod +x run-tests.sh
+./run-tests.sh -w failed.log
+test -f failed.log -a ! -s failed.log
+%endif
 
 %install
 rm -rf $RPM_BUILD_ROOT
