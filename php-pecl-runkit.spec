@@ -1,5 +1,5 @@
 %define		modname	runkit
-%define		status		beta
+%define		status	beta
 Summary:	%{modname} - mangle with user defined functions and classes
 Summary(pl.UTF-8):	%{modname} - obróbka zdefiniowanych przez użytkownika funkcji i klas
 Name:		php-pecl-%{modname}
@@ -12,6 +12,9 @@ Source0:	http://pecl.php.net/get/%{modname}-%{version}.tgz
 Patch0:		branch.diff
 Patch1:		php52-api-warnings.patch
 Patch2:		php53.patch
+Patch3:		php53-zts.patch
+Patch4:		php53-refcount.patch
+Patch5:		php53-sapi_headers.patch
 URL:		http://pecl.php.net/package/runkit/
 BuildRequires:	php-devel >= 4:5.2
 BuildRequires:	rpmbuild(macros) >= 1.344
@@ -44,6 +47,9 @@ mv %{modname}-%{version}/* .
 %patch0 -p0
 %patch1 -p1
 %patch2 -p2
+%patch3 -p1
+%patch4 -p1
+%patch5 -p1
 
 %build
 phpize

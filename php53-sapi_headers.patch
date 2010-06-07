@@ -1,0 +1,16 @@
+--- php-pecl-runkit-0.9/runkit_sandbox.c~	2010-06-06 23:58:03.000000000 +0300
++++ php-pecl-runkit-0.9/runkit_sandbox.c	2010-06-07 20:58:58.819999089 +0300
+@@ -1097,11 +1097,11 @@
+ /* {{{ php_runkit_sandbox_sapi_header_handler
+  * Ignore headers when in a subrequest
+  */
+-static int php_runkit_sandbox_sapi_header_handler(sapi_header_struct *sapi_header,sapi_headers_struct *sapi_headers TSRMLS_DC)
++static int php_runkit_sandbox_sapi_header_handler(sapi_header_struct *sapi_header, sapi_header_op_enum op, sapi_headers_struct *sapi_headers TSRMLS_DC)
+ {
+ 	if (!RUNKIT_G(current_sandbox)) {
+ 		/* Not in a sandbox use SAPI's actual handler */
+-		return php_runkit_sandbox_original_sapi.header_handler(sapi_header, sapi_headers TSRMLS_CC);
++		return php_runkit_sandbox_original_sapi.header_handler(sapi_header, op, sapi_headers TSRMLS_CC);
+ 	}
+ 
+ 	/* Otherwise ignore headers -- TODO: Provide a way for the calling scope to receive these a la output handler */

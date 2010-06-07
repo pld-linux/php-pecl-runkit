@@ -1,0 +1,244 @@
+--- php-pecl-runkit-0.9/runkit_sandbox.c	2010-06-06 23:39:52.517717305 +0300
++++ php-pecl-runkit-0.9/runkit_sandbox.c	2010-06-06 23:40:54.917667858 +0300
+@@ -356,7 +356,7 @@
+ 			HashPosition pos;
+ 			zval **tmpzval;
+ 
+-			if (!zend_is_callable(func_name, IS_CALLABLE_CHECK_NO_ACCESS, &name)) {
++			if (!zend_is_callable(func_name, IS_CALLABLE_CHECK_NO_ACCESS, &name TSRMLS_CC)) {
+ 				php_error_docref1(NULL TSRMLS_CC, name, E_WARNING, "Function not defined");
+ 				if (name) {
+ 					efree(name);
+@@ -925,7 +925,7 @@
+ 		TSRMLS_FETCH();
+ 
+ 		if (!objval->output_handler ||
+-			!zend_is_callable(objval->output_handler, IS_CALLABLE_CHECK_NO_ACCESS, NULL)) {
++			!zend_is_callable(objval->output_handler, IS_CALLABLE_CHECK_NO_ACCESS, NULL TSRMLS_CC)) {
+ 			/* No hander, or invalid handler, pass up the line... */
+ 			bytes_written = PHPWRITE(str, str_length);
+ 
+@@ -987,7 +987,7 @@
+ 		TSRMLS_FETCH();
+ 
+ 		if (!objval->output_handler ||
+-			!zend_is_callable(objval->output_handler, IS_CALLABLE_CHECK_NO_ACCESS, NULL)) {
++			!zend_is_callable(objval->output_handler, IS_CALLABLE_CHECK_NO_ACCESS, NULL TSRMLS_CC)) {
+ 			/* No hander, or invalid handler, pass up the line... */
+ 			if (php_runkit_sandbox_original_sapi.flush) {
+ 				php_runkit_sandbox_original_sapi.flush(server_context);
+@@ -1399,7 +1399,7 @@
+ 	}
+ 
+ 	if (callback && callback_is_true &&
+-		!zend_is_callable(callback, IS_CALLABLE_CHECK_NO_ACCESS, &name)) {
++		!zend_is_callable(callback, IS_CALLABLE_CHECK_NO_ACCESS, &name TSRMLS_CC)) {
+ 		php_error_docref1(NULL TSRMLS_CC, name, E_WARNING, "Second argument (%s) is expected to be a valid callback", name);
+ 		if (name) {
+ 			efree(name);
+@@ -1490,7 +1490,7 @@
+ 
+ PHP_RUNKIT_SANDBOX_SETTING_SETTER(output_handler)
+ {
+-	if (!zend_is_callable(value, IS_CALLABLE_CHECK_NO_ACCESS, NULL)) {
++	if (!zend_is_callable(value, IS_CALLABLE_CHECK_NO_ACCESS, NULL TSRMLS_CC)) {
+ 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "output_handler is not a valid callback is expected to be a valid callback");
+ 	}
+ 
+--- php-pecl-runkit-0.9/runkit.c~	2010-06-06 20:03:13.000000000 +0300
++++ php-pecl-runkit-0.9/runkit.c	2010-06-06 20:03:26.099180061 +0300
+@@ -378,7 +378,7 @@
+ 
+ 	if (RUNKIT_G(replaced_internal_functions)) {
+ 		/* Restore internal functions */
+-		zend_hash_apply_with_arguments(RUNKIT_G(replaced_internal_functions), (apply_func_args_t) php_runkit_restore_internal_functions, 1, RUNKIT_TSRMLS_C);
++		zend_hash_apply_with_arguments(RUNKIT_G(replaced_internal_functions) TSRMLS_CC, (apply_func_args_t) php_runkit_restore_internal_functions, 1, RUNKIT_TSRMLS_C);
+ 		zend_hash_destroy(RUNKIT_G(replaced_internal_functions));
+ 		FREE_HASHTABLE(RUNKIT_G(replaced_internal_functions));
+ 		RUNKIT_G(replaced_internal_functions) = NULL;
+--- php-pecl-runkit-0.9/php_runkit.h~	2010-06-06 23:54:45.000000000 +0300
++++ php-pecl-runkit-0.9/php_runkit.h	2010-06-06 23:55:29.337579318 +0300
+@@ -255,14 +255,14 @@
+ 		{ \
+ 			HashTable *original_hashtable = Z_ARRVAL_P(pzv); \
+ 			array_init(pzv); \
+-			zend_hash_apply_with_arguments(original_hashtable, (apply_func_args_t)php_runkit_sandbox_array_deep_copy, 1, Z_ARRVAL_P(pzv) TSRMLS_CC); \
++			zend_hash_apply_with_arguments(original_hashtable TSRMLS_CC, (apply_func_args_t)php_runkit_sandbox_array_deep_copy, 1, Z_ARRVAL_P(pzv) TSRMLS_CC); \
+ 			break; \
+ 		} \
+ 		default: \
+ 			zval_copy_ctor(pzv); \
+ 	} \
+ 	Z_SET_REFCOUNT_P(pzv, 1); \
+-	Z_UNSET_ISREF(pzv); \
++	Z_UNSET_ISREF(*pzv); \
+ }
+ #endif /* PHP_RUNKIT_SANDBOX */
+ 
+--- php-pecl-runkit-0.9/runkit_constants.c~	2010-06-06 20:07:02.000000000 +0300
++++ php-pecl-runkit-0.9/runkit_constants.c	2010-06-06 20:07:04.583324749 +0300
+@@ -68,7 +68,7 @@
+ 	}
+ 
+ 	/* Process children of this child */
+-	zend_hash_apply_with_arguments(EG(class_table), (apply_func_args_t)php_runkit_update_children_consts, 4, ce, c, cname, cname_len);
++	zend_hash_apply_with_arguments(EG(class_table) TSRMLS_CC, (apply_func_args_t)php_runkit_update_children_consts, 4, ce, c, cname, cname_len);
+ 
+ 	zend_hash_del(&ce->constants_table, cname, cname_len + 1);
+ //*Hu	ZVAL_ADDREF(c);
+@@ -215,7 +215,7 @@
+ 		return FAILURE;
+ 	}
+ 
+-	zend_hash_apply_with_arguments(EG(class_table), (apply_func_args_t)php_runkit_update_children_consts, 4, ce, copyval, constname, constname_len);
++	zend_hash_apply_with_arguments(EG(class_table) TSRMLS_CC, (apply_func_args_t)php_runkit_update_children_consts, 4, ce, copyval, constname, constname_len);
+ 
+ 	return SUCCESS;
+ #else
+--- php-pecl-runkit-0.9/runkit_sandbox_parent.c~	2010-06-06 23:58:03.000000000 +0300
++++ php-pecl-runkit-0.9/runkit_sandbox_parent.c	2010-06-07 21:00:54.433321443 +0300
+@@ -168,7 +168,7 @@
+ 		int i;
+ 
+ 
+-		if (!zend_is_callable(func_name, IS_CALLABLE_CHECK_NO_ACCESS, &name)) {
++		if (!zend_is_callable(func_name, IS_CALLABLE_CHECK_NO_ACCESS, &name TSRMLS_CC)) {
+ 			php_error_docref1(NULL TSRMLS_CC, name, E_WARNING, "Function not defined");
+ 			if (name) {
+ 				efree(name);
+--- php-pecl-runkit-0.9/runkit_classes.c~	2010-06-07 21:10:50.000000000 +0300
++++ php-pecl-runkit-0.9/runkit_classes.c	2010-06-07 21:12:07.283254041 +0300
+@@ -32,7 +32,7 @@
+ 		return ZEND_HASH_APPLY_KEEP;
+ 	}
+ 
+-	zend_hash_apply_with_arguments(EG(class_table), (apply_func_args_t)php_runkit_clean_children_methods, 4, ancestor_class, ce, function_name, function_name_len);
++	zend_hash_apply_with_arguments(EG(class_table) TSRMLS_CC, (apply_func_args_t)php_runkit_clean_children_methods, 4, ancestor_class, ce, function_name, function_name_len);
+ 
+ 	PHP_RUNKIT_DEL_MAGIC_METHOD(ce, fe);
+ 
+@@ -79,7 +79,7 @@
+ 		return ZEND_HASH_APPLY_KEEP;
+ 	}
+ 
+-	zend_hash_apply_with_arguments(EG(class_table), (apply_func_args_t)php_runkit_update_children_methods, 5, ancestor_class, ce, fe, function_name, function_name_len);
++	zend_hash_apply_with_arguments(EG(class_table) TSRMLS_CC, (apply_func_args_t)php_runkit_update_children_methods, 5, ancestor_class, ce, fe, function_name, function_name_len);
+ 
+ 	PHP_RUNKIT_FUNCTION_ADD_REF(fe);
+ 
+--- php-pecl-runkit-0.9/runkit_import.c~	2010-06-07 21:12:33.000000000 +0300
++++ php-pecl-runkit-0.9/runkit_import.c	2010-06-07 21:13:49.267509971 +0300
+@@ -126,7 +126,7 @@
+ 				continue;
+ 			}
+ 
+-			zend_hash_apply_with_arguments(EG(class_table), (apply_func_args_t)php_runkit_clean_children_methods, 4, scope, dce, fn, fn_len);
++			zend_hash_apply_with_arguments(EG(class_table) TSRMLS_CC, (apply_func_args_t)php_runkit_clean_children_methods, 4, scope, dce, fn, fn_len);
+ 			if (zend_hash_del(&dce->function_table, fn, fn_len + 1) == FAILURE) {
+ 				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Error removing old method in destination class %s::%s", dce->name, fe->common.function_name);
+ 				zend_hash_move_forward_ex(&ce->function_table, &pos);
+@@ -138,7 +138,7 @@
+ #ifdef ZEND_ENGINE_2
+ 		fe->common.scope = dce;
+ #endif
+-		zend_hash_apply_with_arguments(EG(class_table), (apply_func_args_t)php_runkit_update_children_methods, 5, dce, dce, fe, fn, fn_len);
++		zend_hash_apply_with_arguments(EG(class_table) TSRMLS_CC, (apply_func_args_t)php_runkit_update_children_methods, 5, dce, dce, fe, fn, fn_len);
+ 
+ 		if (zend_hash_add(&dce->function_table, fn, fn_len + 1, fe, sizeof(zend_function), NULL) == FAILURE) {
+ 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failure importing %s::%s()", ce->name, fe->common.function_name);
+@@ -186,7 +186,7 @@
+ 				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to import %s::%s", dce->name, key);
+ 			}
+ 
+-			zend_hash_apply_with_arguments(EG(class_table), (apply_func_args_t)php_runkit_update_children_consts, 4, dce, c, key, key_len - 1);
++			zend_hash_apply_with_arguments(EG(class_table) TSRMLS_CC, (apply_func_args_t)php_runkit_update_children_consts, 4, dce, c, key, key_len - 1);
+ 		} else {
+ 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Constant has invalid key name");
+ 		}
+@@ -237,7 +237,7 @@
+ 
+ 			if (!cname || strcmp(cname, "*") == 0) {
+ 				/* PUBLIC || PROTECTED */
+-				zend_hash_apply_with_arguments(EG(class_table), (apply_func_args_t)php_runkit_update_children_def_props, 4, dce, p, key, key_len - 1);
++				zend_hash_apply_with_arguments(EG(class_table) TSRMLS_CC, (apply_func_args_t)php_runkit_update_children_def_props, 4, dce, p, key, key_len - 1);
+ 			}
+ 		} else {
+ 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Property has invalid key name");
+--- php-pecl-runkit-0.9/runkit_props.c~	2010-06-07 21:14:15.000000000 +0300
++++ php-pecl-runkit-0.9/runkit_props.c	2010-06-07 21:15:16.674105053 +0300
+@@ -42,7 +42,7 @@
+ 	}
+ 
+ 	/* Process children of this child */
+-	zend_hash_apply_with_arguments(EG(class_table), (apply_func_args_t)php_runkit_update_children_def_props, 4, ce, p, pname, pname_len);
++	zend_hash_apply_with_arguments(EG(class_table) TSRMLS_CC, (apply_func_args_t)php_runkit_update_children_def_props, 4, ce, p, pname, pname_len);
+ 
+ 	zend_hash_del(&ce->default_properties, pname, pname_len + 1);
+ //*Hu	ZVAL_ADDREF(p);
+@@ -144,7 +144,7 @@
+ 
+ #ifdef ZEND_ENGINE_2
+ 	if (visibility != ZEND_ACC_PRIVATE) {
+-		zend_hash_apply_with_arguments(EG(class_table), (apply_func_args_t)php_runkit_update_children_def_props, 4, ce, copyval, key, key_len);
++		zend_hash_apply_with_arguments(EG(class_table) TSRMLS_CC, (apply_func_args_t)php_runkit_update_children_def_props, 4, ce, copyval, key, key_len);
+ 	}
+ #endif
+ 
+--- php-pecl-runkit-0.9/runkit_methods.c~	2010-06-07 21:15:37.000000000 +0300
++++ php-pecl-runkit-0.9/runkit_methods.c	2010-06-07 21:16:51.093235841 +0300
+@@ -210,7 +210,7 @@
+ 	}
+ 
+ 	/* Process children of this child */
+-	zend_hash_apply_with_arguments(EG(class_table), (apply_func_args_t)php_runkit_update_children_methods, 5, ancestor_class, ce, fe, fname, fname_len);
++	zend_hash_apply_with_arguments(EG(class_table) TSRMLS_CC, (apply_func_args_t)php_runkit_update_children_methods, 5, ancestor_class, ce, fe, fname, fname_len);
+ 
+ 	PHP_RUNKIT_FUNCTION_ADD_REF(fe);
+ 	if (zend_hash_add_or_update(&ce->function_table, fname, fname_len + 1, fe, sizeof(zend_function), NULL, cfe ? HASH_UPDATE : HASH_ADD) ==  FAILURE) {
+@@ -259,7 +259,7 @@
+ 	}
+ 
+ 	/* Process children of this child */
+-	zend_hash_apply_with_arguments(EG(class_table), (apply_func_args_t)php_runkit_clean_children_methods, 4, ancestor_class, ce, fname, fname_len);
++	zend_hash_apply_with_arguments(EG(class_table) TSRMLS_CC, (apply_func_args_t)php_runkit_clean_children_methods, 4, ancestor_class, ce, fname, fname_len);
+ 
+ 	zend_hash_del(&ce->function_table, fname, fname_len + 1);
+ 
+@@ -345,8 +345,7 @@
+ 	func.common.fn_flags |= ZEND_ACC_ALLOW_STATIC;
+ #endif
+ 
+-	zend_hash_apply_with_arguments(EG(class_table), (apply_func_args_t)php_runkit_update_children_methods, 5, ancestor_class, ce, &func, methodname, 
+-methodname_len);
++	zend_hash_apply_with_arguments(EG(class_table) TSRMLS_CC, (apply_func_args_t)php_runkit_update_children_methods, 5, ancestor_class, ce, &func, methodname, methodname_len);
+ 
+ 	if (zend_hash_add_or_update(&ce->function_table, methodname, methodname_len + 1, &func, sizeof(zend_function), NULL, add_or_update) == FAILURE) {
+ 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to add method to class");
+@@ -404,7 +403,7 @@
+ 
+ 	PHP_RUNKIT_ADD_MAGIC_METHOD(dce, dfunc, dfeInHashTable);
+ 
+-	zend_hash_apply_with_arguments(EG(class_table), (apply_func_args_t)php_runkit_update_children_methods, 5, dce, dce, &dfe, dfunc, dfunc_len);
++	zend_hash_apply_with_arguments(EG(class_table) TSRMLS_CC, (apply_func_args_t)php_runkit_update_children_methods, 5, dce, dce, &dfe, dfunc, dfunc_len);
+ 
+ 	return SUCCESS;
+ }
+@@ -456,7 +455,7 @@
+ 
+ 	ancestor_class = php_runkit_locate_scope(ce, fe, methodname, methodname_len);
+ 
+-	zend_hash_apply_with_arguments(EG(class_table), (apply_func_args_t)php_runkit_clean_children_methods, 4, ancestor_class, ce, methodname, methodname_len);
++	zend_hash_apply_with_arguments(EG(class_table) TSRMLS_CC, (apply_func_args_t)php_runkit_clean_children_methods, 4, ancestor_class, ce, methodname, methodname_len);
+ 
+ 	if (zend_hash_del(&ce->function_table, methodname, methodname_len + 1) == FAILURE) {
+ 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to remove method from class");
+@@ -501,8 +500,7 @@
+ 	}
+ 
+ 	ancestor_class = php_runkit_locate_scope(ce, fe, methodname, methodname_len);
+-	zend_hash_apply_with_arguments(EG(class_table), (apply_func_args_t)php_runkit_clean_children_methods, 4, ancestor_class, ce, methodname, 
+-methodname_len);
++	zend_hash_apply_with_arguments(EG(class_table) TSRMLS_CC, (apply_func_args_t)php_runkit_clean_children_methods, 4, ancestor_class, ce, methodname, methodname_len);
+ 
+ 	func = *fe;
+ 	PHP_RUNKIT_FUNCTION_ADD_REF(&func);
