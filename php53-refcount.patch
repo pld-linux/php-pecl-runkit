@@ -5,7 +5,7 @@
  		member = &member_copy;
  		zval_copy_ctor(member);
 -		Z_SET_REFCOUNT(member, 1);
-+		Z_SET_REFCOUNT(*member, 1);
++		Z_SET_REFCOUNT_P(member, 1);
  		convert_to_string(member);
  	}
  
@@ -14,7 +14,7 @@
  		member = &member_copy;
  		zval_copy_ctor(member);
 -		Z_SET_REFCOUNT(member, 1);
-+		Z_SET_REFCOUNT(*member, 1);
++		Z_SET_REFCOUNT_(member, 1);
  		convert_to_string(member);
  	}
  
@@ -24,8 +24,8 @@
  		zval_copy_ctor(return_value);
 -		Z_SET_REFCOUNT(return_value, 1);
 -		Z_UNSET_ISREF(return_value);
-+		Z_SET_REFCOUNT(*return_value, 1);
-+		Z_UNSET_ISREF(*return_value);
++		Z_SET_REFCOUNT_P(return_value, 1);
++		Z_UNSET_ISREF_P(return_value);
  	} else {
  		RETVAL_FALSE;
  	}
@@ -34,7 +34,7 @@
  			*cb = *callback;
  			zval_copy_ctor(cb);
 -			Z_SET_REFCOUNT(cb, 0);
-+			Z_SET_REFCOUNT(*cb, 0);
++			Z_SET_REFCOUNT_P(cb, 0);
  			Z_UNSET_ISREF_P(cb);
  		}
  		Z_ADDREF_P(cb);
@@ -44,8 +44,8 @@
  	ZVAL_BOOL(retval, objval->name); \
 -	Z_SET_REFCOUNT(retval, 0); \
 -	Z_UNSET_ISREF(retval); \
-+	Z_SET_REFCOUNT(*retval, 0); \
-+	Z_UNSET_ISREF(*retval); \
++	Z_SET_REFCOUNT_P(retval, 0); \
++	Z_UNSET_ISREF_P(retval); \
  \
  	return retval; \
  }
@@ -54,7 +54,7 @@
  		ZVAL_LONG(retval, objval->parent_scope);
  	}
 -	Z_SET_REFCOUNT(retval, 0);
-+	Z_SET_REFCOUNT(*retval, 0);
++	Z_SET_REFCOUNT_P(retval, 0);
  
  	return retval;
  }
@@ -63,7 +63,7 @@
  		member = &member_copy;
  		zval_copy_ctor(member);
 -		Z_SET_REFCOUNT(member, 1);
-+		Z_SET_REFCOUNT(*member, 1);
++		Z_SET_REFCOUNT_P(member, 1);
  		convert_to_string(member);
  	}
  
@@ -72,7 +72,7 @@
  		member = &member_copy;
  		zval_copy_ctor(member);
 -		Z_SET_REFCOUNT(member, 1);
-+		Z_SET_REFCOUNT(*member, 1);
++		Z_SET_REFCOUNT_P(member, 1);
  		convert_to_string(member);
  	}
  
@@ -81,7 +81,7 @@
  		member = &member_copy;
  		zval_copy_ctor(member);
 -		Z_SET_REFCOUNT(member, 1);
-+		Z_SET_REFCOUNT(*member, 1);
++		Z_SET_REFCOUNT_P(member, 1);
  		convert_to_string(member);
  	}
  
