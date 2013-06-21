@@ -2,11 +2,12 @@
 # Conditional build:
 %bcond_without	tests		# build without tests
 
+%define		php_name	php%{?php_suffix}
 %define		modname	runkit
 %define		status	beta
 Summary:	%{modname} - mangle with user defined functions and classes
 Summary(pl.UTF-8):	%{modname} - obróbka zdefiniowanych przez użytkownika funkcji i klas
-Name:		php-pecl-%{modname}
+Name:		%{php_name}-pecl-%{modname}
 Version:	0.9
 Release:	5
 License:	PHP
@@ -20,8 +21,8 @@ Patch3:		php53-zts.patch
 Patch4:		php53-refcount.patch
 Patch5:		php53-sapi_headers.patch
 URL:		http://pecl.php.net/package/runkit/
-BuildRequires:	php-devel >= 4:5.3.2-5
-BuildRequires:	rpmbuild(macros) >= 1.344
+BuildRequires:	%{php_name}-devel >= 4:5.3.2-5
+BuildRequires:	rpmbuild(macros) >= 1.650
 %{?requires_php_extension}
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 
