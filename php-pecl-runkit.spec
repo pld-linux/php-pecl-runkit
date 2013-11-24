@@ -9,7 +9,7 @@ Summary:	%{modname} - mangle with user defined functions and classes
 Summary(pl.UTF-8):	%{modname} - obróbka zdefiniowanych przez użytkownika funkcji i klas
 Name:		%{php_name}-pecl-%{modname}
 Version:	0.9
-Release:	5
+Release:	6
 License:	PHP
 Group:		Development/Languages/PHP
 Source0:	http://pecl.php.net/get/%{modname}-%{version}.tgz
@@ -24,6 +24,7 @@ URL:		http://pecl.php.net/package/runkit/
 BuildRequires:	%{php_name}-devel >= 4:5.3.2-5
 BuildRequires:	rpmbuild(macros) >= 1.650
 %{?requires_php_extension}
+Provides:	php(%{modname}) = %{version}
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 
 %description
