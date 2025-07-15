@@ -50,12 +50,12 @@ To rozszerzenie ma w PECL status: %{status}.
 %prep
 %setup -qc
 mv %{modname}-%{version}/* .
-%patch0 -p0
-%patch1 -p1
-%patch2 -p2
-%patch3 -p1
-%patch4 -p1
-%patch5 -p1
+%patch -P0 -p0
+%patch -P1 -p1
+%patch -P2 -p2
+%patch -P3 -p1
+%patch -P4 -p1
+%patch -P5 -p1
 
 %build
 phpize
